@@ -23,6 +23,7 @@ import torch
 from .logging_utils import get_inductor_logger
 from torch._inductor.ir import (
     ComputedBuffer,
+    DeviceCopy,
     ExternKernel,
     FallbackKernel,
     FixedLayout,
@@ -1063,9 +1064,11 @@ def propagate_spyre_tensor_layouts(
             else:
                 logger.warning(f"Warning: unhandled node type {type(op.data)}")
         elif isinstance(op, FallbackKernel):
-            op = next(it, None)
-            if not isinstance(op, MultiOutput):
-                raise RuntimeError("FallbackKernel must be followed by MultiOutput")
+            # Result buffers are separate MultiOutput nodes handled below when
+            # reached in topo order; single-output opaque ops have none, so do
+            # NOT assume a MultiOutput follows (the prior code raised here).
+            pass
+        elif isinstance(op, (MultiOutput, DeviceCopy)):
             op.layouts = [generic_layout(op)]
             op.restick_cost_fn = AnyInNode.from_args()
         elif isinstance(op, SpyreConstantFallback):

@@ -19,7 +19,7 @@ from torch._inductor.scheduler import (
     ExternKernelSchedulerNode,
     NopKernelSchedulerNode,
 )
-from torch._inductor.ir import FallbackKernel
+from torch._inductor.ir import FallbackKernel, TorchBindObject
 from torch._inductor.virtualized import V
 from .constants import SEGMENT_SIZE, INTERMEDIATES_SEGMENT
 from .ir import FixedTiledLayout, SpyreEmptyFallback
@@ -208,7 +208,7 @@ def memory_planning(nodes: list[BaseSchedulerNode]) -> list[BaseSchedulerNode]:
         id(layout.allocation)
         for io_name in io_names
         if (io_buf := V.graph.get_buffer(io_name)) is not None
-        and not isinstance(io_buf, Symbol)
+        and not isinstance(io_buf, (Symbol, TorchBindObject))
         and isinstance(layout := io_buf.get_layout(), FixedTiledLayout)
     }
 

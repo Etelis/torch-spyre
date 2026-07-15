@@ -20,6 +20,7 @@ from sympy import Expr, Integer, Symbol, divisors
 from .ir import SpyreConstantFallback, SpyreEmptyFallback
 
 from torch._inductor.ir import (
+    DeviceCopy,
     ComputedBuffer,
     ExternKernel,
     FallbackKernel,
@@ -1164,11 +1165,11 @@ def _iter_computed_buffers(operations: list[Operation]):
             pass
         elif isinstance(op, ComputedBuffer):
             yield op
-        elif isinstance(op, FallbackKernel):
-            op = next(it, None)
-            if not isinstance(op, MultiOutput):
-                raise RuntimeError("FallbackKernel must be followed by MultiOutput")
-            # Work division not supported on fallback kernels
+        elif isinstance(op, (FallbackKernel, MultiOutput, DeviceCopy)):
+            # Opaque custom ops, their MultiOutput result views, and device
+            # transfers carry no work division. Single-output opaque ops have no
+            # trailing MultiOutput, so do not consume/require one here.
+            pass
         elif isinstance(op, ExternKernel):
             if isinstance(op, (SpyreConstantFallback, SpyreEmptyFallback)):
                 # Work division not supported on allocation/constant kernels
